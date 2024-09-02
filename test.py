@@ -66,7 +66,12 @@ def get_data_of_record_in_markdown(data_url, session):
 
             # print('Title: '+result.split('&lt;/span&gt;')[0].split('Title: ')[1])
             # print(unescape(result.split('"/>')[0].split('Title: ')[1]))
-            return unescape(result.split('"/>')[0].split('Title: ')[1])
+
+            try:
+                value = unescape(result.split('"/>')[0].split('Title: ')[1])
+            except:
+                value = unescape(result)
+            return value
 
         # Customize this part to extract the specific data you need
     else:
@@ -139,8 +144,6 @@ def get_record_urls_of_individual_folders(folder_urls_of_scanner_folders, sessio
             # print(soup)
             form_elements = soup.find_all('form', {'data-folder-id': True})
             data_folder_ids = [form['data-folder-id'] for form in form_elements]
-            if(len(data_folder_ids)>0):
-                data_response = session.get('https://app.openregulatory.com/folders/' + scanner_url)
             a_tags = soup.find_all('a', class_='block', href=True)
             # Iterate through each <a> tag
             for a_tag in a_tags:
@@ -162,17 +165,18 @@ def get_record_urls_of_individual_folders(folder_urls_of_scanner_folders, sessio
             form_elements = soup.find_all('form', {'data-folder-id': True})
             data_folder_ids = [form['data-folder-id'] for form in form_elements]
             if (len(data_folder_ids) > 0):
-                data_response = session.get('https://app.openregulatory.com/folders/' + scanner_url)
-                if data_response.status_code == 200:
-                    soup = BeautifulSoup(data_response.content, 'html.parser')
-                    a_tags = soup.find_all('a', class_='block', href=True)
-                    # Iterate through each <a> tag
-                    for a_tag in a_tags:
-                        href_value = a_tag['href']
-                        p_tag = a_tag.find('p', class_='font-semibold text-lg')  # Find the specific <p> tag inside the <a> tag
-                        if p_tag:
-                            text_value = p_tag.text
-                            dict_vals.append({"Title": text_value, "Markdown": get_data_of_record_in_markdown(href_value, session)})
+                for data_folder_id in data_folder_ids:
+                    data_response = session.get('https://app.openregulatory.com/folders/' + data_folder_id)
+                    if data_response.status_code == 200:
+                        soup = BeautifulSoup(data_response.content, 'html.parser')
+                        a_tags = soup.find_all('a', class_='block', href=True)
+                        # Iterate through each <a> tag
+                        for a_tag in a_tags:
+                            href_value = a_tag['href']
+                            p_tag = a_tag.find('p', class_='font-semibold text-lg')  # Find the specific <p> tag inside the <a> tag
+                            if p_tag:
+                                text_value = p_tag.text
+                                dict_vals.append({"Title": text_value, "Markdown": get_data_of_record_in_markdown(href_value, session)})
             # print(data_folder_ids)
         else:
             print("Failed to retrieve the data page.")
@@ -191,10 +195,9 @@ def get_record_urls_of_individual_folders(folder_urls_of_scanner_folders, sessio
 if __name__ == '__main__':
     # Define the URL and login credentials
     login_url = 'https://app.openregulatory.com/users/sign_in'  # Replace with actual login URL
-    scanner_type_urls=['https://app.openregulatory.com/folders/036856ae-622c-4fe5-90bd-3a1524e7c8b9?sort=az']
+    scanner_type_urls=['https://app.openregulatory.com/folders/0b49af69-1b4d-431a-8379-967431f9bd02?sort=az']
 
     session = login_to_website(login_url)
     for scanner_type_url in scanner_type_urls:
         folder_urls_of_scanner_folders = get_folder_urls_of_scanner_folders(scanner_type_url, session)
         get_record_urls_of_individual_folders(folder_urls_of_scanner_folders, session)
-
